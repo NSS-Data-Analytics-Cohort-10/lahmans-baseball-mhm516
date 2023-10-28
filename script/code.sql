@@ -1,11 +1,13 @@
 --1. What range of years for baseball games played does the provided database cover? 
 SELECT
-MIN(yearid), 
-MAX(yearid)
+MIN(cp.yearid), 
+(SELECT
+ MAX(yearid)
+ FROM teams
+)
 FROM collegeplaying AS cp
-LEFT JOIN teams AS t
-USING (yearid);
---1864 to 2014
+;
+--1864 to 2016
 
 --2. Find the name and height of the shortest player in the database. How many games did he play in? What is the name of the team for which he played?
 SELECT 
@@ -87,6 +89,19 @@ FROM teams
 WHERE yearid >= 1920
 GROUP BY decades
 ORDER BY decades
+/*
+decade so_by_game hr_by_game
+"1920s"	2.81	0.40
+"1930s"	3.32	0.55
+"1940s"	3.55	0.52
+"1950s"	4.40	0.84
+"1960s"	5.72	0.82
+"1970s"	5.14	0.75
+"1980s"	5.36	0.81
+"1990s"	6.15	0.96
+"2000s"	6.56	1.07
+"2010s"	7.52	0.98
+*/
 
 --6. Find the player who had the most success stealing bases in 2016, where __success__ is measured as the percentage of stolen base attempts which are successful. (A stolen base attempt results either in a stolen base or being caught stealing.) Consider only players who attempted _at least_ 20 stolen bases.
 
@@ -109,10 +124,99 @@ ORDER BY avg_sb desc
 LIMIT 1;
 --	"owingch01"	21	2	23	91.30434782608695652200
 	
-7.  From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? What is the smallest number of wins for a team that did win the world series? Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case. Then redo your query, excluding the problem year. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? What percentage of the time?
+--7.  A. From 1970 – 2016, what is the largest number of wins for a team that did not win the world series? 
+SELECT *
+FROM teams
+WHERE wswin = 'N'
+AND yearid BETWEEN 1970 AND 2016
+ORDER BY w DESC
+LIMIT 1;
+--2001	"AL"	"SEA"	116
+--B. What is the smallest number of wins for a team that did win the world series? 
+ 
+SELECT *
+FROM teams
+WHERE wswin = 'Y'
+AND yearid BETWEEN 1970 AND 2016
+ORDER BY w 
+LIMIT 1;
+--1981	"NL"	"LAN"	63
+--Doing this will probably result in an unusually small number of wins for a world series champion – determine why this is the case.
+--1981. Another players' strike, with this one hitting in the middle of the season, breaking the shortened baseball season into two parts. Players walked out after the games on June 11 and play did not resume until August 10, resulting in a schedule of about 107 games for each team. -NBC Sports
+--C. Then redo your query, excluding the problem year.
+WITH min_w AS
+(
+SELECT
+yearid,
+teamid,
+w,
+wswin,
+ROW_NUMBER()
+OVER (PARTITION BY teamid
+	 ORDER BY w ) w_rank
+FROM teams
+WHERE yearid BETWEEN 1970 AND 2016
+	and wswin = 'Y'
+)
+SELECT
+yearid,
+teamid,
+w,
+wswin
+FROM min_w
+WHERE w_rank = 1
+ORDER BYw
+LIMIT 2;
+
+--2006	"NL"	"SLN"	83
+--D. How often from 1970 – 2016 was it the case that a team with the most wins also won the world series? 
+WITH max_w AS
+(
+SELECT
+yearid,
+teamid,
+w,
+wswin,
+ROW_NUMBER()
+OVER (PARTITION BY yearid
+	 ORDER BY w DESC) w_rank
+FROM teams
+WHERE yearid BETWEEN 1970 AND 2016
+)
+SELECT
+SUM(
+CASE
+WHEN) wswin = 'Y' THEN 1
+ELSE 0 END) AS max_win_wswinner_total
+FROM max_w
+WHERE w_rank = 1
+--10
+--What percentage of the time?
+WITH max_w AS
+(
+SELECT
+yearid,
+teamid,
+w,
+wswin,
+ROW_NUMBER()
+OVER (PARTITION BY yearid
+	 ORDER BY w DESC) w_rank
+FROM teams
+WHERE yearid BETWEEN 1970 AND 2016
+)
+SELECT
+ROUND
+	(CAST
+	 	(SUM
+		 (CASE
+		  WHEN wswin = 'Y' THEN 1
+ELSE 0 END) AS numeric) * 100/CAST(COUNT(yearid)AS numeric),2) AS max_win_wswinner_percentage
+FROM max_w
+WHERE w_rank = 1
 
 
-8. Using the attendance figures from the homegames table, find the teams and parks which had the top 5 average attendance per game in 2016 (where average attendance is defined as total attendance divided by number of games). Only consider parks where there were at least 10 games played. Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.
+--8. Using the attendance figures from the homegames table, find the teams and parks which had the top 5 average attendance per game in 2016 (where average attendance is defined as total attendance divided by number of games). Only consider parks where there were at least 10 games played. Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.
 
 
 9. Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? Give their full name and the teams that they were managing when they won the award.
