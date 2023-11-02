@@ -185,9 +185,9 @@ WHERE yearid BETWEEN 1970 AND 2016
 )
 SELECT
 SUM(
-CASE
-WHEN) wswin = 'Y' THEN 1
-ELSE 0 END) AS max_win_wswinner_total
+	CASE
+	WHEN wswin = 'Y' THEN 1
+	ELSE 0 END) AS max_win_wswinner_total
 FROM max_w
 WHERE w_rank = 1
 --10
@@ -217,11 +217,77 @@ WHERE w_rank = 1
 
 
 --8. Using the attendance figures from the homegames table, find the teams and parks which had the top 5 average attendance per game in 2016 (where average attendance is defined as total attendance divided by number of games). Only consider parks where there were at least 10 games played. Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.
+WITH home_attendance AS(
+	select 
+	team,
+	park,
+	attendance,
+	games,
+	ROW_NUMBER()
+	OVER (PARTITION BY team
+	 ORDER BY attendance DESC) attendance_rank
+	FROM homegames
+	WHERE year = 2016
+	AND games >=10)
+SELECT
+team,
+park,
+SUM(attendance)/
+SUM(games) AS avg_attendance
+FROM home_attendance
+GROUP BY
+team,
+park
+ORDER BY avg_attendance DESC
+LIMIT 5;
+
+ --Report the park name, team name, and average attendance. Repeat for the lowest 5 average attendance.
+ 
+WITH home_attendance AS(
+	select 
+	team,
+	park,
+	attendance,
+	games,
+	ROW_NUMBER()
+	OVER (PARTITION BY team
+	 ORDER BY attendance DESC) attendance_rank
+	FROM homegames
+	WHERE year = 2016
+	AND games >=10)
+SELECT
+team,
+park,
+SUM(attendance)/
+SUM(games) AS avg_attendance
+FROM home_attendance
+GROUP BY
+team,
+park
+ORDER BY avg_attendance 
+LIMIT 5;
+	
+	--9. Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? Give their full name and the teams that they were managing when they won the award.
+
+select
+ppl.namefirst||ppl.namelast AS name
+FROM awardsmanagers	as am
+left join awardsmanagers	as am2
+using(playerid)
+left join people as ppl
+using(playerid)
+WHERE am.awardid = 'TSN Manager of the Year'
+	and am2.awardid = 'TSN Manager of the Year'
+	and am.lgid != 'ML'
+	and am2.lgid != 'ML'
+	and am.lgid = 'NL'
+	and am2.lgid = 'AL'
+group by ppl.namefirst||ppl.namelast
 
 
-9. Which managers have won the TSN Manager of the Year award in both the National League (NL) and the American League (AL)? Give their full name and the teams that they were managing when they won the award.
 
-10. Find all players who hit their career highest number of home runs in 2016. Consider only players who have played in the league for at least 10 years, and who hit at least one home run in 2016. Report the players' first and last names and the number of home runs they hit in 2016.
+--10. Find all players who hit their career highest number of home runs in 2016. Consider only players who have played in the league for at least 10 years, and who hit at least one home run in 2016. Report the players' first and last names and the number of home runs they hit in 2016.
+
 
 
 **Open-ended questions**
