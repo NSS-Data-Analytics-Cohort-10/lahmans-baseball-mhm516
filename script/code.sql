@@ -284,12 +284,32 @@ WHERE am.awardid = 'TSN Manager of the Year'
 	and am2.lgid = 'AL'
 group by ppl.namefirst||ppl.namelast
 
-
-
 --10. Find all players who hit their career highest number of home runs in 2016. Consider only players who have played in the league for at least 10 years, and who hit at least one home run in 2016. Report the players' first and last names and the number of home runs they hit in 2016.
 
-
-
+select
+a.playerid,
+ppl.namefirst||ppl.namelast AS name,
+a.hrs_yearly,
+a.yearid,
+a.rank
+FROM
+(select
+	playerid,
+	hr as hrs_yearly,
+	yearid, 
+	dense_rank() over (partition by playerid order by hr desc)AS rank
+	from batting
+	where hr> 1
+	group by
+	 playerid,
+	 hr,
+	yearid) AS a
+left join people as ppl
+using(playerid)
+where a.rank =1
+and a.hrs_yearly>1
+and a.yearid>1959
+order by a.yearid
 **Open-ended questions**
 
 11. Is there any correlation between number of wins and team salary? Use data from 2000 and later to answer this question. As you do this analysis, keep in mind that salaries across the whole league tend to increase together, so you may want to look on a year-by-year basis.
